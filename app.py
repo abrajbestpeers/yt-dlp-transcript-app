@@ -5,6 +5,11 @@ from dotenv import load_dotenv
 import tempfile
 import glob
 import re
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +23,7 @@ def get_transcript_with_yt_dlp(video_url):
     try:
         # Use a temporary directory to store the subtitle file
         with tempfile.TemporaryDirectory() as tmpdir:
+            logger.info(f"Created temporary directory: {tmpdir}")
             output_template = f"{tmpdir}/%(id)s.%(ext)s"
             command = [
                 'yt-dlp',
@@ -27,16 +33,20 @@ def get_transcript_with_yt_dlp(video_url):
                 '-o', output_template,
                 video_url
             ]
-            print(f"Executing command: {' '.join(command)}")
+            logger.info(f"Executing command: {' '.join(command)}")
             result = subprocess.run(command, capture_output=True, text=True)
-            print(f"yt-dlp stdout: {result.stdout[:500]}...")
-            print(f"yt-dlp stderr: {result.stderr}")
+            logger.info(f"yt-dlp stdout: {result.stdout[:500]}...")
+            logger.info(f"yt-dlp stderr: {result.stderr}")
+            
             # Find the .vtt file
             vtt_files = glob.glob(f"{tmpdir}/*.vtt")
+            logger.info(f"Found {len(vtt_files)} vtt files: {vtt_files}")
             if not vtt_files:
-                print("No .vtt file found after yt-dlp run.")
+                logger.error("No .vtt file found after yt-dlp run.")
                 return None
             vtt_file = vtt_files[0]
+            logger.info(f"Processing vtt file: {vtt_file}")
+            
             with open(vtt_file, 'r', encoding='utf-8') as f:
                 vtt_content = f.read()
             lines = vtt_content.strip().split('\n')
@@ -53,12 +63,14 @@ def get_transcript_with_yt_dlp(video_url):
                 # Remove timestamp and tag patterns like <00:00:01.439><c>
                 clean_line = re.sub(r'<[^>]+>', '', line)
                 transcript_lines.append(clean_line.strip())
+            
+            logger.info(f"Processed {len(transcript_lines)} transcript lines")
             if not transcript_lines:
-                print("No transcript lines found after filtering")
+                logger.error("No transcript lines found after filtering")
                 return None
             return " ".join(transcript_lines)
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {str(e)}", exc_info=True)
         return None
 
 @app.route('/api/transcript', methods=['POST'])
