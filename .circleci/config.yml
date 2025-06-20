@@ -1,0 +1,17 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - run:
+          name: Run build script
+          command: ./build.sh
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
