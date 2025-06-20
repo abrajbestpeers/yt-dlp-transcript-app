@@ -7,6 +7,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Make build.sh executable
+          command: chmod +x build.sh
+      - run:
           name: Run build script
           command: ./build.sh
 
@@ -15,3 +18,7 @@ workflows:
   build_and_test:
     jobs:
       - build
+    filters:
+      branches:
+        only:
+          - main
